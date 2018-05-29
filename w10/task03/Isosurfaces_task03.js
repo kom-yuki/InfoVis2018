@@ -1,7 +1,28 @@
-function Isosurfaces( volume, isovalue )
+function Isosurfaces( volume, isovalue ,screen)
 {
+    // Create color map
+    var cmap = [];
+    for ( var i = 0; i < 256; i++ )
+    {
+        var S = i / 255.0; // [0,1]
+        var R = Math.max( Math.cos( ( S - 1.0 ) * Math.PI ), 0.0 );
+        var G = Math.max( Math.cos( ( S - 0.5 ) * Math.PI ), 0.0 );
+        var B = Math.max( Math.cos( S * Math.PI ), 0.0 );
+        var color = new THREE.Color( R, G, B );
+        cmap.push( [ S, '0x' + color.getHexString() ] );
+    }
+
     var geometry = new THREE.Geometry();
-    var material = new THREE.MeshLambertMaterial();
+    // var material = new THREE.MeshLambertMaterial();
+    var material = new THREE.ShaderMaterial({
+      vertexColors: THREE.VertexColors,
+      vertexShader: document.getElementById('lambertian.vert').text,
+      fragmentShader: document.getElementById('lambertian.frag').text,
+      uniforms: {
+        light_position: {type: 'v3',value: screen.light.position},
+        material_color: {type: 'v3',value: new THREE.Color().setHex( cmap[ isovalue ][1] )}
+      }
+    });
 
     var smin = volume.min_value;
     var smax = volume.max_value;
@@ -63,18 +84,6 @@ function Isosurfaces( volume, isovalue )
     geometry.computeVertexNormals();
 
     //material.color = new THREE.Color( "white" );
-    // Create color map
-    var cmap = [];
-    for ( var i = 0; i < 256; i++ )
-    {
-        var S = i / 255.0; // [0,1]
-        var R = Math.max( Math.cos( ( S - 1.0 ) * Math.PI ), 0.0 );
-        var G = Math.max( Math.cos( ( S - 0.5 ) * Math.PI ), 0.0 );
-        var B = Math.max( Math.cos( S * Math.PI ), 0.0 );
-        var color = new THREE.Color( R, G, B );
-        cmap.push( [ S, '0x' + color.getHexString() ] );
-    }
-
     material.color = new THREE.Color().setHex( cmap[ isovalue ][1] );
 
 
@@ -124,6 +133,13 @@ function Isosurfaces( volume, isovalue )
 
     function interpolated_vertex( v0, v1, s )
     {
-        return new THREE.Vector3().addVectors( v0, v1 ).divideScalar( 2 );
+      var id0 = v0.x + (volume.resolution.x*v0.y) + (volume.resolution.x*volume.resolution.y*v0.z);
+      var id1 = v1.x + (volume.resolution.x*v1.y) + (volume.resolution.x*volume.resolution.y*v1.z);
+
+      var s0 = volume.values[id0][0];
+      var s1 = volume.values[id1][0];
+
+      var t = Math.abs((s-s0)/(s1-s0));
+      return new THREE.Vector3().addVectors(v0.multiplyScalar(1-t),v1.multiplyScalar(t));
     }
 }
