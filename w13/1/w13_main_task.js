@@ -1,7 +1,5 @@
 function main()
 {
-  //var volume = new KVS.SingleCubeData();
-  //var volume = new KVS.CreateHydrogenData( 64, 64, 64 );
   var volume = new KVS.LobsterData();
   var screen = new KVS.THREEScreen();
   var surfaces;
@@ -26,16 +24,18 @@ function main()
     var smin = volume.min_value;
     var smax = volume.max_value;
     var isovalue = KVS.Mix( smin, smax, 0.5 );
-    var color = KVS.Mix( smin, smax, 0.5);
+    var color = "#ffffff";
     var isosurface = new KVS.Isosurface();
-    var flag = 0
+    var interpolate = 0;
+    var reflection = 0;
     isosurface.setIsovalue( isovalue );
 
     document.getElementById('label').innerHTML = "Isovalue: " + Math.round( isovalue );
-    document.getElementById('label2').innerHTML = "Color: " + Math.round( color );
+    document.getElementById('label2').innerHTML = "Color: ";
+
 
     var line = KVS.ToTHREELine( box.exec( volume ) );
-    surfaces = Isosurfaces( volume, isovalue, color, flag);
+    surfaces = Isosurfaces( volume, isovalue, color, interpolate, reflection, screen);
     screen.scene.add( surfaces );
     screen.scene.add( line );
 
@@ -46,50 +46,28 @@ function main()
       document.getElementById('label').innerHTML = "Isovalue: " + Math.round( isovalue );
     });
 
-    document.getElementById('change-isovalue-button')
-    .addEventListener('click', function() {
-      screen.scene.remove(surfaces)
-      var value = +document.getElementById('isovalue').value;
-      var isovalue = KVS.Mix( smin, smax, value );
-      var value = +document.getElementById('color').value;
-      var color = KVS.Mix( smin, smax, value );
-      var isosurface = new KVS.Isosurface();
-      isosurface.setIsovalue( isovalue );
-      surfaces = Isosurfaces( volume, isovalue, color, flag );
-      screen.scene.add( surfaces );
-    });
-
+    /*
     document.getElementById('color')
     .addEventListener('mousemove', function() {
       var value = +document.getElementById('color').value;
       var color = KVS.Mix( smin, smax, value );
       document.getElementById('label2').innerHTML = "Color: " + Math.round( color );
     });
+    */
 
-    document.getElementById('change-color-button')
+    document.getElementById('change-button')
     .addEventListener('click', function() {
       screen.scene.remove(surfaces)
       var value = +document.getElementById('isovalue').value;
       var isovalue = KVS.Mix( smin, smax, value );
-      var value = +document.getElementById('color').value;
-      var color = KVS.Mix( smin, smax, value );
+      //var value = +document.getElementById('color').value;
+      //var color = KVS.Mix( smin, smax, value );
+      color = document.getElementById('color-dialog').value;
       var isosurface = new KVS.Isosurface();
       isosurface.setIsovalue( isovalue );
-      surfaces = Isosurfaces( volume, isovalue, color, flag );
-      screen.scene.add( surfaces );
-    });
-
-    document.getElementById('change-interpolate-button')
-    .addEventListener('click', function() {
-      screen.scene.remove(surfaces)
-      var value = +document.getElementById('isovalue').value;
-      var isovalue = KVS.Mix( smin, smax, value );
-      var value = +document.getElementById('color').value;
-      var color = KVS.Mix( smin, smax, value );
-      var isosurface = new KVS.Isosurface();
-      isosurface.setIsovalue( isovalue );
-      flag = getInterpolate();
-      surfaces = Isosurfaces( volume, isovalue, color, flag );
+      interpolate = getInterpolate();
+      reflection = getReflection();
+      surfaces = Isosurfaces( volume, isovalue, color, interpolate, reflection, screen);
       screen.scene.add( surfaces );
     });
 
@@ -111,10 +89,21 @@ function main()
 function getInterpolate(){
   radio = document.getElementsByName('interpolate')
   if(radio[0].checked){
-    flag = 0;
+    interpolate = 0;
   }
   else if (radio[1].checked) {
-    flag = 1;
+    interpolate = 1;
   }
-  return flag;
+  return interpolate;
+}
+
+function getReflection(){
+  radio = document.getElementsByName('reflection')
+  if(radio[0].checked){
+    reflection = 0;
+  }
+  else if (radio[1].checked) {
+    reflection = 1;
+  }
+  return reflection;
 }

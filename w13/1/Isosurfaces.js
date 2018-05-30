@@ -1,7 +1,39 @@
-function Isosurfaces( volume, isovalue , materialColor, flag)
+function Isosurfaces( volume, isovalue , materialColor, interpolate, reflection, screen)
 {
     var geometry = new THREE.Geometry();
-    var material = new THREE.MeshLambertMaterial();
+    var material;
+    if(reflection == 0){
+      material = new THREE.ShaderMaterial ({
+    vertexColors: THREE.VertexColors,
+    vertexShader: document.getElementById('LR.vert').text,
+    fragmentShader: document.getElementById('LR.frag').text,
+    uniforms: {
+      light_position: { type: 'v3', value: screen.light.position }
+    }
+  });
+    }
+    else if (reflection == 1) {
+      material = new THREE.ShaderMaterial ({
+  vertexColors: THREE.VertexColors,
+  vertexShader: document.getElementById('PR.vert').text,
+  fragmentShader: document.getElementById('PR.frag').text,
+  uniforms: {
+    light_position: { type: 'v3', value: screen.light.position }
+  }
+});
+    }
+
+    // Create color map
+    var cmap = [];
+    for ( var i = 0; i < 256; i++ )
+    {
+        var S = i / 255.0; // [0,1]
+        var R = Math.max( Math.cos( ( S - 1.0 ) * Math.PI ), 0.0 );
+        var G = Math.max( Math.cos( ( S - 0.5 ) * Math.PI ), 0.0 );
+        var B = Math.max( Math.cos( S * Math.PI ), 0.0 );
+        var color = new THREE.Color( R, G, B );
+        cmap.push( [ S, '0x' + color.getHexString() ] );
+    }
 
     var smin = volume.min_value;
     var smax = volume.max_value;
@@ -10,6 +42,7 @@ function Isosurfaces( volume, isovalue , materialColor, flag)
     var lut = new KVS.MarchingCubesTable();
     var cell_index = 0;
     var counter = 0;
+    var counter2 = 0;
     for ( var z = 0; z < volume.resolution.z - 1; z++ )
     {
         for ( var y = 0; y < volume.resolution.y - 1; y++ )
@@ -41,9 +74,9 @@ function Isosurfaces( volume, isovalue , materialColor, flag)
                     var v4 = new THREE.Vector3( x + vid4[0], y + vid4[1], z + vid4[2] );
                     var v5 = new THREE.Vector3( x + vid5[0], y + vid5[1], z + vid5[2] );
 
-                    var v01 = interpolated_vertex( v0, v1, isovalue, flag);
-                    var v23 = interpolated_vertex( v2, v3, isovalue, flag);
-                    var v45 = interpolated_vertex( v4, v5, isovalue, flag);
+                    var v01 = interpolated_vertex( v0, v1, isovalue, interpolate);
+                    var v23 = interpolated_vertex( v2, v3, isovalue, interpolate);
+                    var v45 = interpolated_vertex( v4, v5, isovalue, interpolate);
 
                     geometry.vertices.push( v01 );
                     geometry.vertices.push( v23 );
@@ -53,6 +86,11 @@ function Isosurfaces( volume, isovalue , materialColor, flag)
                     var id1 = counter++;
                     var id2 = counter++;
                     geometry.faces.push( new THREE.Face3( id0, id1, id2 ) );
+
+                    //var C = new THREE.Color().setHex( cmap[Math.round( materialColor )][1] );
+                    var C = new THREE.Color( materialColor );
+                    geometry.faces[counter2].color = C;
+                    counter2++;
                 }
             }
             cell_index++;
@@ -61,21 +99,6 @@ function Isosurfaces( volume, isovalue , materialColor, flag)
     }
 
     geometry.computeVertexNormals();
-
-    //material.color = new THREE.Color( "white" );
-
-    // Create color map
-    var cmap = [];
-    for ( var i = 0; i < 256; i++ )
-    {
-        var S = i / 255.0; // [0,1]
-        var R = Math.max( Math.cos( ( S - 1.0 ) * Math.PI ), 0.0 );
-        var G = Math.max( Math.cos( ( S - 0.5 ) * Math.PI ), 0.0 );
-        var B = Math.max( Math.cos( S * Math.PI ), 0.0 );
-        var color = new THREE.Color( R, G, B );
-        cmap.push( [ S, '0x' + color.getHexString() ] );
-    }
-    material.color = new THREE.Color().setHex( cmap[Math.round( materialColor )][1] );
 
     return new THREE.Mesh( geometry, material );
 
@@ -121,9 +144,9 @@ function Isosurfaces( volume, isovalue , materialColor, flag)
         return index;
     }
 
-    function interpolated_vertex( v0, v1, s, flag)
+    function interpolated_vertex( v0, v1, s, interpolate)
     {
-      if(flag == 0){
+      if(interpolate == 0){
         return new THREE.Vector3().addVectors( v0, v1 ).divideScalar( 2 );
       }
       else{
